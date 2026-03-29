@@ -21,7 +21,17 @@ export default function Home() {
     }
   };
 
-  // 🎧 Draw waveform
+  const handleSeek = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!audioRef.current || !canvasRef.current) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const percent = x / rect.width;
+
+    audioRef.current.currentTime =
+      percent * audioRef.current.duration;
+  };
+
   useEffect(() => {
     if (!audioUrl || !canvasRef.current) return;
 
@@ -52,7 +62,12 @@ export default function Home() {
             if (datum > max) max = datum;
           }
 
-          ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
+          ctx.fillRect(
+            i,
+            (1 + min) * amp,
+            1,
+            Math.max(1, (max - min) * amp)
+          );
         }
       });
   }, [audioUrl]);
@@ -72,7 +87,12 @@ export default function Home() {
             ref={canvasRef}
             width={300}
             height={80}
-            style={{ width: "100%", maxWidth: "400px" }}
+            onClick={handleSeek}
+            style={{
+              width: "100%",
+              maxWidth: "400px",
+              cursor: "pointer",
+            }}
           />
 
           <audio ref={audioRef} controls src={audioUrl} />
