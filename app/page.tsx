@@ -1,10 +1,11 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export default function Home() {
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -20,6 +21,42 @@ export default function Home() {
     }
   };
 
+  // 🎧 Draw waveform
+  useEffect(() => {
+    if (!audioUrl || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const audioCtx = new AudioContext();
+
+    fetch(audioUrl)
+      .then(res => res.arrayBuffer())
+      .then(buffer => audioCtx.decodeAudioData(buffer))
+      .then(data => {
+        const channel = data.getChannelData(0);
+        const step = Math.ceil(channel.length / canvas.width);
+        const amp = canvas.height / 2;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#fff";
+
+        for (let i = 0; i < canvas.width; i++) {
+          let min = 1.0;
+          let max = -1.0;
+
+          for (let j = 0; j < step; j++) {
+            const datum = channel[i * step + j];
+            if (datum < min) min = datum;
+            if (datum > max) max = datum;
+          }
+
+          ctx.fillRect(i, (1 + min) * amp, 1, Math.max(1, (max - min) * amp));
+        }
+      });
+  }, [audioUrl]);
+
   return (
     <main className="container">
       <h1 className="title">🎧 Audio Forge</h1>
@@ -31,6 +68,13 @@ export default function Home() {
 
       {audioUrl && (
         <div className="player">
+          <canvas
+            ref={canvasRef}
+            width={300}
+            height={80}
+            style={{ width: "100%", maxWidth: "400px" }}
+          />
+
           <audio ref={audioRef} controls src={audioUrl} />
 
           <div style={{ marginTop: "1rem", display: "flex", gap: "10px" }}>
